@@ -1,0 +1,17 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: mixed-line-ending
+        args: [--fix=lf]
+
+  - repo: local
+    hooks:
+      - id: validate-skill-frontmatter
+        name: Validate SKILL.md frontmatter
+        entry: scripts/validate-skill.sh
+        language: script
+        files: 'SKILL\.md$'
