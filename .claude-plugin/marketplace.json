@@ -1,0 +1,14 @@
+{
+  "name": "ai-skills",
+  "owner": {
+    "name": "Hayden Sather"
+  },
+  "description": "Generic, public Claude Code skills for an agentic SDLC.",
+  "plugins": [
+    {
+      "name": "sdlc",
+      "source": "./plugins/sdlc",
+      "description": "Spec-first agentic SDLC: grill-me spec, propose-options design, pre-push review, PR review loop, handoff and unblock, ordered by the ship workflow, with session-start and pre-push hooks."
+    }
+  ]
+}

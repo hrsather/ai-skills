@@ -15,3 +15,9 @@ repos:
         entry: scripts/validate-skill.sh
         language: script
         files: 'SKILL\.md$'
+      - id: validate-plugins
+        name: Validate marketplace and plugin manifests
+        entry: claude plugin validate .
+        language: system
+        pass_filenames: false
+        always_run: true
