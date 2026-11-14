@@ -1,0 +1,8 @@
+{
+  "name": "sdlc",
+  "description": "Spec-first agentic SDLC: grill-me spec, propose-options design, pre-push review, PR review loop, handoff and unblock, ordered by the ship workflow, with session-start and pre-push hooks.",
+  "author": {
+    "name": "Hayden Sather"
+  },
+  "repository": "https://github.com/hrsather/ai-skills"
+}

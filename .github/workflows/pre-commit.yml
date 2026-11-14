@@ -14,3 +14,6 @@ jobs:
         with:
           python-version: "3.12"
       - uses: pre-commit/action@v3.0.1
+        env:
+          # Needs the claude CLI; runs locally only.
+          SKIP: validate-plugins
