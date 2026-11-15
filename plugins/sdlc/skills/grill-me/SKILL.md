@@ -22,7 +22,7 @@ Get to a spec good enough that a fresh agent could build, review and ship the ch
    - **People:** who reviews or approves, and who else might need to be asked for something.
 
    Push back on vague answers ("make it better", "handle errors") until they're specific. Look ahead: imagine building, reviewing and deploying it, and ask now about anything that would otherwise stop the work later. Stop asking once the answers stop changing the plan.
-3. **Write the spec** to `SPEC-<worktree>.md` at the worktree root, where `<worktree>` is `basename "$(git rev-parse --show-toplevel)"`. It is gitignored. Use the eight headings above plus empty `## Decisions` and `## Open questions` sections, terse bullets, no filler.
+3. **Write the spec** to `SPEC-<worktree>.md` at the worktree root, where `<worktree>` is `basename "$(git rev-parse --show-toplevel)"`. It must never be committed: it is gitignored by the user's global gitignore, and where that isn't set up, add `SPEC-*.md` and `HANDOFF-*.md` to `.git/info/exclude` first. Use the eight headings above plus empty `## Decisions` and `## Open questions` sections, terse bullets, no filler.
 4. **Confirm.** Show the user the spec and ask for a yes before writing code. Edit it until they agree.
 5. **Design choice?** If more than one approach is plausible, run `propose-options` next. Otherwise build.
 
