@@ -3,20 +3,22 @@ name: ship
 description: The end-to-end pipeline for a non-trivial task, from spec to verified in production. Run this at the start of any non-trivial change, and re-read it whenever unsure what comes next. It orders the other skills, says what Claude decides alone, and when it may reach out to people.
 metadata:
   author: hsather
-  version: "1.1"
+  version: "1.2"
 ---
 
 One workstream per session, in its own worktree. The spec is where the user spends their time; after it is approved, work autonomously until the PR is green.
 
+Tool names below are Claude Code's. Elsewhere (for example a chat agent), use the equivalent: "the terminal" means wherever the user is talking to you, and a skill that isn't installed (`handoff`, `unblock`) means doing its job by hand: write the handoff summary to `HANDOFF-<worktree>.md` at the worktree root, or draft the message for the user to send. "CLAUDE.md" means the repo's own CLAUDE.md or AGENTS.md, so read it yourself at the start. The Debugging rules are: find the root cause first, test one hypothesis at a time, and re-investigate from the evidence after two failed fixes.
+
 ## Stages
 
-1. **Worktree.** `EnterWorktree` on a new `feature/` or `fix/` branch. If `HANDOFF-<worktree>.md` or `SPEC-<worktree>.md` exists, read them and resume from where they say.
+1. **Worktree.** `EnterWorktree` (or `git worktree add <path>`, then run every later command in `<path>`) on a new `feature/` or `fix/` branch. If `HANDOFF-<worktree>.md` or `SPEC-<worktree>.md` exists, read them and resume from where they say.
 2. **Spec.** Run `grill-me`. This is the main human conversation, so be thorough here rather than asking later. Exit: the user said yes to `SPEC-<worktree>.md`.
 3. **Design.** If the spec leaves a real design choice open, run `propose-options`. Exit: a design is recorded in the spec.
 4. **Build and test.** Implement in small commits. For each "done when" item, write or extend an automated test where the repo has tests, and run it. Follow the Debugging rules when something fails. Exit: every Verification item in the spec has been run and passed, with output seen this session.
-5. **Review.** Run `pre-push-review`, then push (the pre-push hook runs the repo's checks) and open the PR. Exit: PR open.
+5. **Review.** Run `pre-push-review`, then push and open the PR. In Claude Code the pre-push hook runs the repo's checks; elsewhere run them yourself before pushing. Exit: PR open.
 6. **Get to green.** Run `pr-review-loop`, plus any repo-specific green checks from CLAUDE.md. Exit: green, as defined below.
-7. **Reach out.** Now, and not before: print the decisions log and any open questions in the terminal and send the user one push notification, then run the repo's human-gated skill if CLAUDE.md names one, or ask the user to review and merge. Exit: merged, deployed, and verified in the live environment where there is one.
+7. **Reach out.** Now, and not before: print the decisions log and any open questions in the terminal and notify the user once (see Reaching out), then run the repo's human-gated skill if CLAUDE.md names one, or ask the user to review and merge. Exit: merged, deployed, and verified in the live environment where there is one.
 8. **Log.** If `$SHIP_LOG` is set, append one JSON line to it (`echo '<json>' >> "$SHIP_LOG"`), filled from this session and the spec:
    ```
    {"date":"YYYY-MM-DD","repo":"owner/name","pr":"<url>","outcome":"shipped|abandoned|handed-off",
@@ -26,7 +28,7 @@ One workstream per session, in its own worktree. The spec is where the user spen
     "notes":"<one line: what slowed it down or what a step caught that others missed>"}
    ```
    `remote_ai_fixed` counts valid findings the remote reviewer still raised after the local review: it is the measure of whether `pre-push-review` pays off.
-9. **Clean up.** Delete `SPEC-` and `HANDOFF-` files, `ExitWorktree` with removal if the tree is clean, delete the merged local branch. Report what shipped.
+9. **Clean up.** Delete `SPEC-` and `HANDOFF-` files, `ExitWorktree` with removal if the tree is clean (elsewhere, `git worktree remove`), delete the merged local branch. Report what shipped.
 
 ## Green
 
@@ -48,8 +50,8 @@ When stuck, unblock yourself before involving anyone: search the code, docs and 
 
 - **Not before green.** Don't message the user or anyone else until the PR is green. Questions that come up earlier go under `## Open questions` in the spec; keep working on your best answer and revisit if the answer changes things.
 - **One exception:** if green is unreachable (blocked on access, someone else's outage, or a question outside your authority with no work left that doesn't depend on it), notify the user. Say what you tried and what you need, and never contact anyone else first.
-- **Questions go to the user first, by push notification:** write the full question in the terminal, then send a push notification with the PushNotification tool (under 200 characters, leading with what they need to do). Don't DM the user on Slack: the Slack tools post as the user, so they never get notified. Contacting anyone else goes through `unblock`, which drafts the message for the user to send.
-- **Replies:** the user answers in the terminal. After notifying, continue with other work. If nothing is left to do, say in the terminal that you're waiting.
+- **Questions go to the user first, by push notification:** write the full question in the terminal, then send a push notification with the PushNotification tool (under 200 characters, leading with what they need to do). Without that tool, post the question in the conversation you were asked in, leading with what they need to do, and only when no other work is left (posting it usually ends your turn). Don't DM the user on Slack: the Slack tools post as the user, so they never get notified. Contacting anyone else goes through `unblock`, which drafts the message for the user to send.
+- **Replies:** the user answers in the same conversation. After notifying, continue with other work. If nothing is left to do, say there that you're waiting.
 
 Before the user clears context or the session ends, run `handoff`.
 

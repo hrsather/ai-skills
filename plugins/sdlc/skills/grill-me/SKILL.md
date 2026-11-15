@@ -3,7 +3,7 @@ name: grill-me
 description: Interview the user thoroughly until the task is fully specified, including what Claude may decide alone, then write SPEC-<worktree>.md. Run this before starting any non-trivial change (new feature, behavior change, infra change, anything touching more than a couple of files). Skip it for typos, one-line fixes, and tasks the user already specified in detail.
 metadata:
   author: hsather
-  version: "1.0"
+  version: "1.1"
 ---
 
 Get to a spec good enough that a fresh agent could build, review and ship the change from it alone. This is the user's main time investment: after it is approved, Claude works on its own until the PR is green and doesn't come back with questions it could have asked now. Be thorough.
@@ -11,7 +11,7 @@ Get to a spec good enough that a fresh agent could build, review and ship the ch
 ## Steps
 
 1. **Read first.** Look at the code and docs the task touches, so you only ask what the code can't answer.
-2. **Grill.** Ask one question at a time with AskUserQuestion, each with a recommended answer first. Keep going until every item below is settled:
+2. **Grill.** Ask one question at a time (AskUserQuestion in Claude Code, a plain chat question elsewhere), each with a recommended answer first. Keep going until every item below is settled:
    - **Goal:** what problem this solves and for whom.
    - **Done when:** concrete, checkable acceptance criteria.
    - **Scope:** what is in, and what is explicitly out.
@@ -22,7 +22,7 @@ Get to a spec good enough that a fresh agent could build, review and ship the ch
    - **People:** who reviews or approves, and who else might need to be asked for something.
 
    Push back on vague answers ("make it better", "handle errors") until they're specific. Look ahead: imagine building, reviewing and deploying it, and ask now about anything that would otherwise stop the work later. Stop asking once the answers stop changing the plan.
-3. **Write the spec** to `SPEC-<worktree>.md` at the worktree root, where `<worktree>` is `basename "$(git rev-parse --show-toplevel)"`. It is gitignored. Use the eight headings above plus empty `## Decisions` and `## Open questions` sections, terse bullets, no filler.
+3. **Write the spec** to `SPEC-<worktree>.md` at the worktree root, where `<worktree>` is `basename "$(git rev-parse --show-toplevel)"`. It must never be committed: it is gitignored by the user's global gitignore, and where that isn't set up, add `SPEC-*.md` and `HANDOFF-*.md` to `.git/info/exclude` first. Use the eight headings above plus empty `## Decisions` and `## Open questions` sections, terse bullets, no filler.
 4. **Confirm.** Show the user the spec and ask for a yes before writing code. Edit it until they agree.
 5. **Design choice?** If more than one approach is plausible, run `propose-options` next. Otherwise build.
 

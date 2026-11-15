@@ -1,19 +1,32 @@
 ---
 name: pr-review-loop
-description: Handle AI reviewer comments and failing CI checks on a pull request. Run this automatically after every `gh pr create` and after every commit or push to a branch that has an open PR. Waits for the AI review, fixes valid comments and failures caused by the PR, replies to and resolves irrelevant comments, and stops after 5 rounds. Leaves human comments alone.
+description: Handle AI reviewer comments and failing CI checks on a pull request. Run this automatically after every PR creation and after every commit or push to a branch that has an open PR. Waits for the AI review, fixes valid comments and failures caused by the PR, replies to and resolves irrelevant comments, and stops after 5 rounds. Leaves human comments alone.
 metadata:
   author: hsather
-  version: "1.0"
+  version: "1.1"
 ---
 
 Address AI review comments and failing required checks on the current branch's PR, then stop. One loop per PR at a time.
 
-Helper: `${CLAUDE_SKILL_DIR}/pr-review.sh` (called `PR` below). Run one command per Bash call.
+Helper: `pr-review.sh` in this skill's directory (`${CLAUDE_SKILL_DIR}` in Claude Code; called `PR` below). Run one command per Bash call. It needs `gh` and `jq`.
+
+## Without `gh`
+
+Where `gh` or `jq` isn't available, skip the helper and do the same steps with the GitHub tools you have (for example the GitHub MCP server, and its Actions tools if enabled):
+- First check whether the repo has an AI reviewer (configured in rules, config files or workflows, or reviewing recent PRs). If not, gate on CI only and say "no AI reviewers on this repo".
+- Find the PR for the branch, then read its review threads, comments and required checks.
+- Wait for checks and the AI review by re-reading their status every few minutes, for up to 25 minutes per round. Don't poll faster.
+- Reply to and resolve threads with the tools, and count the rounds yourself. The 5-round cap, the triage rules and the report below apply unchanged. If the tools can't resolve threads, reply and list them under "Left for you".
+- End every reply and comment with `<!-- pr-review-loop -->` and treat items carrying it as your own. Classify other authors as in Notes: AI logins as listed there, CI bots ignored, everyone else human.
+- Keep your own list of comment ids you have handled or reported, and skip them in later rounds (the helper's `mark-handled`).
+- There is no lock helper. Don't start a second loop on the same PR yourself.
+- Where a step says `gh run view` or `gh run rerun`, use the Actions tools to read the failed log or re-run the failed jobs. Without Actions tools, report the failing check and its link instead of re-running it.
+- If `unblock` isn't installed, draft the message for the user to send and stop.
 
 ## Rules
 
 - **One loop at a time.** `PR acquire` takes a per-PR lock. If it exits 3, another loop is running: stop silently. The commits this skill makes are part of the loop, so they never start a new one.
-- **No agents, no extra shells.** Don't use the Agent or Workflow tools. The only background commands are `PR wait` and `gh pr checks <url> --required --watch`, one at a time.
+- **No agents, no extra shells.** Don't use the Agent or Workflow tools, or any other subagent delegation. The only background commands are `PR wait` and `gh pr checks <url> --required --watch`, one at a time (none without `gh`).
 - **CI fixes are capped too.** If the same required check still fails after 2 fix attempts, stop fixing it and run the `unblock` skill.
 - **Max 5 rounds.** `PR bump` counts them and exits 4 after the 5th. Then stop and treat the PR as good enough. This is how nitpick loops end.
 - **Humans are the user's.** Never reply to, resolve or change code for a comment from a human. Report them at the end.
@@ -24,9 +37,9 @@ Helper: `${CLAUDE_SKILL_DIR}/pr-review.sh` (called `PR` below). Run one command 
 
 1. **Find the PR.** `gh pr view --json url`. No PR: stop.
 2. **Lock.** `PR acquire`. Exit 3: stop silently.
-3. **Wait for the AI review.** Run `PR wait <head-sha>` with `run_in_background: true`, where the sha is `git rev-parse HEAD` of what you pushed (make sure it is pushed; short shas and refs work too). It blocks until the AI review checks finish, up to 25 minutes, and prints findings as JSON. Don't poll it: act when it completes, then read its output file. It first runs `PR reviewers`, which looks for Copilot auto-review in the base branch's rules, reviewer config files or workflows, and AI-authored reviews or comments on recent PRs. If the repo has none, `wait` returns right away with the findings (human comments only), and the loop gates on CI alone; say "no AI reviewers on this repo" in the report. If a lookup fails, `reviewers` assumes there are reviewers and `wait` waits as before.
+3. **Wait for the AI review.** Run `PR wait <head-sha>` in the background (`run_in_background: true` in Claude Code), where the sha is `git rev-parse HEAD` of what you pushed (make sure it is pushed; short shas and refs work too). It blocks until the AI review checks finish, up to 25 minutes, and prints findings as JSON. Don't poll it: act when it completes, then read its output file. It first runs `PR reviewers`, which looks for Copilot auto-review in the base branch's rules, reviewer config files or workflows, and AI-authored reviews or comments on recent PRs. If the repo has none, `wait` returns right away with the findings (human comments only), and the loop gates on CI alone; say "no AI reviewers on this repo" in the report. If a lookup fails, `reviewers` assumes there are reviewers and `wait` waits as before.
 4. **Count the round.** `PR bump`. Exit 4: `PR release` and go to the report.
-5. **Check CI.** `gh pr checks <url> --required --json name,state,link`. If required checks are still pending and there is nothing in `ai_threads` or `ai_comments`, run `gh pr checks <url> --required --watch` with `run_in_background: true` and check again when it finishes.
+5. **Check CI.** `gh pr checks <url> --required --json name,state,link`. If required checks are still pending and there is nothing in `ai_threads` or `ai_comments`, run `gh pr checks <url> --required --watch` in the background and check again when it finishes.
 6. **Triage** the JSON and the failed checks (see below). No AI items and no failed checks: `PR release` and go to the report.
 7. **Fix.** Make the changes for the valid items, run the repo's quick local checks (tests, lint, `terragrunt hcl fmt`, whatever the repo uses), commit, and push. Push before replying.
 8. **Reply and resolve.**
