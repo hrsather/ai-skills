@@ -3,7 +3,7 @@ name: ship
 description: The end-to-end pipeline for a non-trivial task, from spec to verified in production. Run this at the start of any non-trivial change, and re-read it whenever unsure what comes next. It orders the other skills, says what Claude decides alone, and when it may reach out to people.
 metadata:
   author: hsather
-  version: "1.2"
+  version: "1.3"
 ---
 
 One workstream per session, in its own worktree. The spec is where the user spends their time; after it is approved, work autonomously until the PR is green.
@@ -16,7 +16,7 @@ Tool names below are Claude Code's. Elsewhere (for example a chat agent), use th
 2. **Spec.** Run `grill-me`. This is the main human conversation, so be thorough here rather than asking later. Exit: the user said yes to `SPEC-<worktree>.md`.
 3. **Design.** If the spec leaves a real design choice open, run `propose-options`. Exit: a design is recorded in the spec.
 4. **Build and test.** Implement in small commits. For each "done when" item, write or extend an automated test where the repo has tests, and run it. Follow the Debugging rules when something fails. Exit: every Verification item in the spec has been run and passed, with output seen this session.
-5. **Review.** Run `pre-push-review`, then push and open the PR. In Claude Code the pre-push hook runs the repo's checks; elsewhere run them yourself before pushing. Exit: PR open.
+5. **Review.** If the repo has a `.pre-commit-config.yaml`, run pre-commit locally first, before any code review, even in Claude Code where the pre-push hook is only a backstop. Run it on the files the branch changed (`pre-commit run --from-ref <base> --to-ref HEAD`), fix what it reports, and commit any auto-fixes. If `pre-commit` isn't installed, install it, or else run the repo's equivalent checks by hand and log that under `## Decisions`. Then run `pre-push-review`, then push and open the PR. Elsewhere than Claude Code, run the repo's other checks yourself before pushing. Exit: PR open.
 6. **Get to green.** Run `pr-review-loop`, plus any repo-specific green checks from CLAUDE.md. Exit: green, as defined below.
 7. **Reach out.** Now, and not before: print the decisions log and any open questions in the terminal and notify the user once (see Reaching out), then run the repo's human-gated skill if CLAUDE.md names one, or ask the user to review and merge. Exit: merged, deployed, and verified in the live environment where there is one.
 8. **Log.** If `$SHIP_LOG` is set, append one JSON line to it (`echo '<json>' >> "$SHIP_LOG"`), filled from this session and the spec:
