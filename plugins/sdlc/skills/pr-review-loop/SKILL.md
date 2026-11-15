@@ -1,19 +1,28 @@
 ---
 name: pr-review-loop
-description: Handle AI reviewer comments and failing CI checks on a pull request. Run this automatically after every `gh pr create` and after every commit or push to a branch that has an open PR. Waits for the AI review, fixes valid comments and failures caused by the PR, replies to and resolves irrelevant comments, and stops after 5 rounds. Leaves human comments alone.
+description: Handle AI reviewer comments and failing CI checks on a pull request. Run this automatically after every PR creation and after every commit or push to a branch that has an open PR. Waits for the AI review, fixes valid comments and failures caused by the PR, replies to and resolves irrelevant comments, and stops after 5 rounds. Leaves human comments alone.
 metadata:
   author: hsather
-  version: "1.0"
+  version: "1.1"
 ---
 
 Address AI review comments and failing required checks on the current branch's PR, then stop. One loop per PR at a time.
 
-Helper: `${CLAUDE_SKILL_DIR}/pr-review.sh` (called `PR` below). Run one command per Bash call.
+Helper: `${CLAUDE_SKILL_DIR}/pr-review.sh` (called `PR` below). Run one command per Bash call. It needs `gh` and `jq`.
+
+## Without `gh`
+
+Where `gh` or `jq` is missing, or the environment gives you GitHub tools instead (for example the GitHub MCP server, including its Actions tools), skip the helper and do the same steps with those tools:
+- Find the PR for the branch, then read its review threads, comments and required checks.
+- Wait for checks and the AI review by re-reading their status every few minutes, for up to 25 minutes in total. Don't poll faster.
+- Reply to and resolve threads with the tools, and count the rounds yourself. The 5-round cap, the triage rules and the report below apply unchanged.
+- There is no lock helper. Don't start a second loop on the same PR yourself.
+- Where a step says `gh run view` or `gh run rerun`, use the Actions tools to read the failed log or re-run the failed jobs.
 
 ## Rules
 
 - **One loop at a time.** `PR acquire` takes a per-PR lock. If it exits 3, another loop is running: stop silently. The commits this skill makes are part of the loop, so they never start a new one.
-- **No agents, no extra shells.** Don't use the Agent or Workflow tools. The only background commands are `PR wait` and `gh pr checks <url> --required --watch`, one at a time.
+- **No agents, no extra shells.** Don't use the Agent or Workflow tools, or any other subagent delegation. The only background commands are `PR wait` and `gh pr checks <url> --required --watch`, one at a time.
 - **CI fixes are capped too.** If the same required check still fails after 2 fix attempts, stop fixing it and run the `unblock` skill.
 - **Max 5 rounds.** `PR bump` counts them and exits 4 after the 5th. Then stop and treat the PR as good enough. This is how nitpick loops end.
 - **Humans are the user's.** Never reply to, resolve or change code for a comment from a human. Report them at the end.

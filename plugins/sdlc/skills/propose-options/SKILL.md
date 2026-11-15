@@ -3,7 +3,7 @@ name: propose-options
 description: Generate three different designs for a specified change, have a fresh judge pick the best, and record the decision in the spec before building. Run this after `grill-me` when the spec leaves a real design choice open (more than one plausible approach, or the right layer or tool is unclear). Skip it when there is one obvious approach.
 metadata:
   author: hsather
-  version: "1.0"
+  version: "1.1"
 ---
 
 Pick the approach on paper before writing code. Designs only, no implementation, until the user confirms.
@@ -11,7 +11,7 @@ Pick the approach on paper before writing code. Designs only, no implementation,
 ## Steps
 
 1. **Spec.** Read `SPEC-<worktree>.md` (`<worktree>` is `basename "$(git rev-parse --show-toplevel)"`). No spec: run `grill-me` first.
-2. **Propose (3 Sonnet agents, in parallel).** Launch three Agents in one message, each with `model: "sonnet"`, `subagent_type: "general-purpose"`. Give each the repo path, the spec path, and one angle:
+2. **Propose (3 Sonnet agents, in parallel).** Launch three subagents at once: in Claude Code, three Agents in one message, each with `model: "sonnet"`, `subagent_type: "general-purpose"`; elsewhere, three delegated subagents if you can delegate. If you can't, write the three designs yourself one after another, each from its own angle without looking at the others. Give each the repo path, the spec path, and one angle:
    - **A, minimal:** the smallest change that meets every "done when" item.
    - **B, robust:** the version that best handles the spec's risks and future change, still within scope.
    - **C, different:** a deliberately different approach from the obvious one, e.g. another layer, an existing tool or config instead of new code, or removing something instead of adding.
@@ -20,7 +20,7 @@ Pick the approach on paper before writing code. Designs only, no implementation,
 
    > Read the spec at `<spec path>` and the code it touches in `<repo>`. Propose one design using this angle: <angle>. Don't edit files. Reply in under 300 words with: Approach (what and why), Files touched, Risks and how it rolls back, Verification (how to prove it meets each "done when" item), Cost (rough size of the change). If this angle can't meet the spec, say so instead of stretching it.
 
-3. **Judge (1 Opus agent).** Launch one Agent with `model: "opus"`, `subagent_type: "general-purpose"`. Give it the spec path and the three proposals labeled A, B, C, without their angle names or your opinion. Prompt:
+3. **Judge (1 Opus agent).** Launch one fresh judge: in Claude Code, an Agent with `model: "opus"`, `subagent_type: "general-purpose"`; elsewhere, a subagent on your strongest model, or a separate pass of your own if you can't delegate. Give it the spec path and the three proposals labeled A, B, C, without their angle names or your opinion. Prompt:
 
    > Read the spec at `<spec path>` and check the proposals against the code in `<repo>`. Score each on: meets every "done when" item, risk (especially anything destructive or hard to roll back), simplicity, and verification. Proposals that don't meet the spec are out regardless of other scores. Pick a winner, or combine parts if that is clearly better, and say why in under 150 words. Name the runner-up and the one thing it does better.
 
