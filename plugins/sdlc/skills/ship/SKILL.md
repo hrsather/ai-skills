@@ -3,7 +3,7 @@ name: ship
 description: The end-to-end pipeline for a non-trivial task, from spec to verified in production. Run this at the start of any non-trivial change, and re-read it whenever unsure what comes next. It orders the other skills, says what Claude decides alone, and when it may reach out to people.
 metadata:
   author: hsather
-  version: "1.3"
+  version: "1.4"
 ---
 
 One workstream per session, in its own worktree. The spec is where the user spends their time; after it is approved, work autonomously until the PR is green.
@@ -18,7 +18,7 @@ Tool names below are Claude Code's. Elsewhere (for example a chat agent), use th
 4. **Build and test.** Implement in small commits. For each "done when" item, write or extend an automated test where the repo has tests, and run it. Follow the Debugging rules when something fails. Exit: every Verification item in the spec has been run and passed, with output seen this session.
 5. **Review.** If the repo has a `.pre-commit-config.yaml`, run pre-commit locally first, before any code review, even in Claude Code where the pre-push hook is only a backstop. Run it on the files the branch changed (`pre-commit run --from-ref <base> --to-ref HEAD`), fix what it reports, and commit any auto-fixes. If `pre-commit` isn't installed, install it, or else run the repo's equivalent checks by hand and log that under `## Decisions`. Then run `pre-push-review`, then push and open the PR. Elsewhere than Claude Code, run the repo's other checks yourself before pushing. Exit: PR open.
 6. **Get to green.** Run `pr-review-loop`, plus any repo-specific green checks from CLAUDE.md. Exit: green, as defined below.
-7. **Reach out.** Now, and not before: print the decisions log and any open questions in the terminal and notify the user once (see Reaching out), then run the repo's human-gated skill if CLAUDE.md names one, or ask the user to review and merge. Exit: merged, deployed, and verified in the live environment where there is one.
+7. **Reach out.** Now, and not before: print the decisions log and any open questions in the terminal and notify the user once (see Reaching out), then run the repo's human-gated skill if CLAUDE.md names one. If it names none, report the PR as ready and stop there: merge only if the user explicitly asked you to merge this PR (in this conversation or the spec) and Green is met; approving the spec is not a merge instruction. Don't ask them to open the PR or to merge it; if a required human review is the remaining gate, state that as a fact in the report. Exit: PR reported ready; or, if the user asked for a merge, merged, deployed, and verified in the live environment where there is one.
 8. **Log.** If `$SHIP_LOG` is set, append one JSON line to it (`echo '<json>' >> "$SHIP_LOG"`), filled from this session and the spec:
    ```
    {"date":"YYYY-MM-DD","repo":"owner/name","pr":"<url>","outcome":"shipped|abandoned|handed-off",
@@ -43,6 +43,8 @@ Between the approved spec and green, make decisions yourself. Ask only when a ch
 - a scope change.
 
 For everything else, pick the option that best fits the spec, prefer the reversible and simpler one, and log it in the spec under `## Decisions` as `- <decision>: <why> (<alternatives>)`. The user reviews the log at stage 7.
+
+Never ask the user to do something you can do yourself. Create the branch, push, open the PR, run the command, read the log, check the cluster, fix the CI failure: do it, then report what you did. Do not end a message with an optional offer for a step the pipeline already calls for ("want me to open the PR?", "say yes and I'll start"): the approved spec already authorizes the next stage of this pipeline, so take it. This does not override the exceptions above: destructive or hard-to-reverse actions, security, access or cost changes, scope changes and anything outside the spec's Authority section still need the user's say-so. It applies from the approved spec onward; the Spec stage stays a conversation. Ask the user for an action only when it needs something you cannot get: a secret or credential, access you lack, or a human-only authority (including sending messages to other people, which go through `unblock` as a draft). Say exactly what you need and why you can't do it, and route it through Reaching out below.
 
 When stuck, unblock yourself before involving anyone: search the code, docs and Slack for the answer, read logs, try a different approach, check how similar changes were done before (`git log -S`, past PRs). Count it as stuck only after those fail.
 
